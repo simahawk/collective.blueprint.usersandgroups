@@ -3,6 +3,16 @@
     i18n_domain="collective.blueprint.usersandgroups">
 
   <utility
+     component=".blueprint.JSONSource"
+     name="collective.blueprint.usersandgroups.source"
+     />
+
+  <utility
+     component=".blueprint.CreateRoles"
+     name="collective.blueprint.usersandgroups.createroles"
+     />
+
+  <utility
      component=".blueprint.CreateUser"
      name="collective.blueprint.usersandgroups.createuser"
      />

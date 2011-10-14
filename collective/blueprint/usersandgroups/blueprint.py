@@ -1,8 +1,97 @@
-from zope.interface import implements, classProvides
-from collective.transmogrifier.interfaces import ISection, ISectionBlueprint
-from Products.CMFCore.utils import getToolByName
-from zope.app.component.hooks import getSite
+import os
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
 from AccessControl.interfaces import IRoleManager
+
+from zope.interface import implements, classProvides
+from zope.app.component.hooks import getSite
+
+from Products.CMFCore.utils import getToolByName
+
+from collective.transmogrifier.interfaces import ISection, ISectionBlueprint
+from collective.transmogrifier.utils import resolvePackageReferenceOrFile
+
+
+class JSONSource(object):
+    """
+    loads users/groups exported trough export_scripts/plone2.0_export.py
+    """
+
+    classProvides(ISectionBlueprint)
+    implements(ISection)
+
+    def __init__(self, transmogrifier, name, options, previous):
+        self.transmogrifier = transmogrifier
+        self.name = name
+        self.options = options
+        self.previous = previous
+        self.context = transmogrifier.context
+
+        self.path = resolvePackageReferenceOrFile(options['path'])
+        if self.path is None or not os.path.isdir(self.path):
+            raise Exception, 'Path ('+str(self.path)+') does not exists.'
+
+    def __iter__(self):
+        for item in self.previous:
+            yield item
+
+        item3_list = [int(i)
+                      for i in os.listdir(self.path)
+                      if not i.startswith('.')]
+        for item3 in sorted(item3_list):
+            item3_path = os.path.join(self.path, str(item3))
+
+            item2_list = [int(j[:-5])
+                          for j in os.listdir(item3_path)
+                          if j.endswith('.json')]
+            for item2 in sorted(item2_list):
+                item2_path = os.path.join(self.path,
+                                          str(item3),
+                                          str(item2)+'.json')
+                f = open(item2_path)
+                item = json.loads(f.read())
+                f.close()
+
+                yield item
+
+
+class CreateRoles(object):
+    """ Loops trough roles assigned to users/groups (by the '_roles' key)
+    and create them if do not exist.
+    This should be run *before* CreateUser and/or CreateGroup
+    """
+
+    implements(ISection)
+    classProvides(ISectionBlueprint)
+
+    def __init__(self, transmogrifier, name, options, previous):
+        self.transmogrifier = transmogrifier
+        self.name = name
+        self.options = options
+        self.previous = previous
+        self.context = transmogrifier.context
+        self.portal = getToolByName(self.context, 'portal_url').getPortalObject()
+        self.acl_users = getToolByName(portal, 'acl_users')
+
+    def __iter__(self):
+        for item in self.previous:
+            if '_roles' in item.keys():
+                for role in item['_roles']:
+                    if not role in self.portal.valid_roles():
+                        self.portal._addRole(role)
+                        try:
+                            # see
+                            # http://repositorio.interlegis.gov.br/ILSAAP/trunk/InstallUtils/installers/installRoles.py
+                            # and
+                            # http://stackoverflow.com/questions/7769242/how-to-add-a-portal-role-by-python-code
+                            self.acl_users.portal_role_manager.addRole(role)
+                        except:
+                            pass
+            yield item
 
 
 class CreateUser(object):
@@ -21,7 +110,6 @@ class CreateUser(object):
 
     def __iter__(self):
         for item in self.previous:
-
             if '_password' not in item.keys() or \
                '_username' not in item.keys():
                 yield item; continue
