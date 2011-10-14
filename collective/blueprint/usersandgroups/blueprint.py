@@ -60,8 +60,8 @@ class JSONSource(object):
 
 
 class CreateRoles(object):
-    """ Loops trough roles assigned to users/groups (by the '_roles' key)
-    and create them if do not exist.
+    """ Loops trough roles assigned to users/groups
+    (by any of the '*_roles' keys) and create them if do not exist.
     This should be run *before* CreateUser and/or CreateGroup
     """
 
@@ -79,18 +79,20 @@ class CreateRoles(object):
 
     def __iter__(self):
         for item in self.previous:
-            if '_roles' in item.keys():
-                for role in item['_roles']:
-                    if not role in self.portal.valid_roles():
-                        self.portal._addRole(role)
-                        try:
-                            # see
-                            # http://repositorio.interlegis.gov.br/ILSAAP/trunk/InstallUtils/installers/installRoles.py
-                            # and
-                            # http://stackoverflow.com/questions/7769242/how-to-add-a-portal-role-by-python-code
-                            self.acl_users.portal_role_manager.addRole(role)
-                        except:
-                            pass
+            roles = item.get('_roles',[])
+            roles += item.get('_root_roles',[])
+            roles += item.get('_local_roles',[])
+            for role in set(roles):
+                if not role in self.portal.valid_roles():
+                    self.portal._addRole(role)
+                    try:
+                        # see
+                        # http://repositorio.interlegis.gov.br/ILSAAP/trunk/InstallUtils/installers/installRoles.py
+                        # and
+                        # http://stackoverflow.com/questions/7769242/how-to-add-a-portal-role-by-python-code
+                        self.acl_users.portal_role_manager.addRole(role)
+                    except:
+                        pass
             yield item
 
 
