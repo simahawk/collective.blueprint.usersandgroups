@@ -10,10 +10,50 @@ GROUP_NAMES = {}
 USERS = {}
 
 def export(self):
+    setup_path(self)
     get_users_and_groups([self], 1)
     get_users_and_groups(walk_all(self), 0)
     store_users_and_groups()
-    return 'OK'
+
+    users_list = [
+        "%s (%s)" % (k.ljust(20),v['_properties']['title'])
+        for k,v in USERS.items()
+    ]
+
+    report =[
+        "==============================",
+        "Users and Groups export report",
+        "==============================",
+        "Found %s users" % len(USERS.keys()),
+        "Users exported to %s" % UTEMP,
+        "Found %s groups" % len(GROUPS.keys()),
+        "Groups exported to %s" % GTEMP,
+        "***********",
+        "Items list",
+        "***********",
+        "GROUPS\n" + "\n".join(GROUPS.keys()),
+        "-"*50,
+        "USERS\n" + "\n".join(users_list),
+    ]
+    return "\n".join(report)
+
+def setup_path(self):
+    global UTEMP
+    global GTEMP
+    request = self.REQUEST
+    path = request.get('path')
+    if path:
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        UTEMP = os.path.join(path, 'users')
+        if not os.path.isdir(UTEMP):
+            os.mkdir(UTEMP)
+        print "Exporting users to %s" % UTEMP
+        GTEMP = os.path.join(path, 'groups')
+        if not os.path.isdir(GTEMP):
+            os.mkdir(GTEMP)
+        print "Exporting groups to %s" % GTEMP
+
 
 def walk_all(folder):
     for item_id in folder.objectIds():
