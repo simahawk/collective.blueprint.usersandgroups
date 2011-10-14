@@ -75,7 +75,7 @@ class CreateRoles(object):
         self.previous = previous
         self.context = transmogrifier.context
         self.portal = getToolByName(self.context, 'portal_url').getPortalObject()
-        self.acl_users = getToolByName(portal, 'acl_users')
+        self.acl_users = getToolByName(self.context, 'acl_users')
 
     def __iter__(self):
         for item in self.previous:
