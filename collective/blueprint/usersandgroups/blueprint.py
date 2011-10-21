@@ -8,7 +8,6 @@ except ImportError:
 from AccessControl.interfaces import IRoleManager
 
 from zope.interface import implements, classProvides
-from zope.app.component.hooks import getSite
 
 from Products.CMFCore.utils import getToolByName
 
@@ -19,6 +18,7 @@ from collective.transmogrifier.utils import resolvePackageReferenceOrFile
 class JSONSource(object):
     """
     loads users/groups exported trough export_scripts/plone2.0_export.py
+    it's a modified version of collective.jsonmigrator.jsonsource
     """
 
     classProvides(ISectionBlueprint)
@@ -157,7 +157,7 @@ class UpdateUserProperties(object):
         self.context = transmogrifier.context
         self.memtool = getToolByName(self.context, 'portal_membership')
         self.gtool = getToolByName(self.context, 'portal_groups')
-        self.portal = getSite()
+        self.portal = getToolByName(self.context, 'portal_url').getPortalObject()
 
     def __iter__(self):
         for item in self.previous:
@@ -209,7 +209,7 @@ class UpdateGroupProperties(object):
         self.previous = previous
         self.context = transmogrifier.context
         self.gtool = getToolByName(self.context, 'portal_groups')
-        self.portal = getSite()
+        self.portal = getToolByName(self.context, 'portal_url').getPortalObject()
 
     def __iter__(self):
         for item in self.previous:
